@@ -23,6 +23,10 @@ class ServerInfoPacket(ClientboundMasterPacket):
 class LoginResultPacket(ClientboundMasterPacket):
     account_info: pak.Optional(AccountInfo, pak.Bool)
 
+    @property
+    def succeeded(self):
+        return self.account_info is not None
+
 @public
 class RegisterResultPacket(ClientboundMasterPacket):
     account_info: pak.Optional(AccountInfo, pak.Bool)

@@ -61,7 +61,7 @@ class Proxy(pak.AsyncPacketHandler):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
-            self._last_serverbound_packet = None
+            self._unhandled_serverbound_packets = asyncio.Queue()
 
         async def continuously_read_packets(self):
             try:
@@ -90,15 +90,11 @@ class Proxy(pak.AsyncPacketHandler):
                 yield packet
 
         async def _read_next_packet(self):
-            # TODO: Might be better to use a value holder or whatever.
-            while self._last_serverbound_packet is None or self._last_serverbound_packet.RESPONSE is None:
-                await pak.util.yield_exec()
+            next_serverbound_packet = await self._unhandled_serverbound_packets.get()
 
-            packet_cls = self._last_serverbound_packet.RESPONSE
+            packet_cls = next_serverbound_packet.RESPONSE
             if packet_cls is ServerboundMasterPacket.UNKNOWN_RESPONSE:
-                raise ValueError(f"Attempted to read unknown response for {self._last_serverbound_packet}")
-
-            self._last_serverbound_packet = None
+                raise ValueError(f"Attempted to read unknown response for {next_serverbound_packet}")
 
             try:
                 return await packet_cls.unpack_async(self.reader, ctx=self.ctx)
@@ -106,27 +102,24 @@ class Proxy(pak.AsyncPacketHandler):
                 return None
 
         async def write_packet_instance(self, packet):
-            if (
-                self._last_serverbound_packet is not None and
-
-                self._last_serverbound_packet.RESPONSE is not None
-            ):
-                raise ValueError(
-                    f"Attempted to write '{packet}' before reading "
-                    f"response to '{self._last_serverbound_packet}'"
-                )
-
             if packet.RESPONSE is ServerboundMasterPacket.UNKNOWN_RESPONSE:
                 raise ValueError(f"Attempted to write {packet} with unknown response")
 
             await self.write_data(packet.pack(ctx=self.ctx))
 
-            self._last_serverbound_packet = packet
+            if packet.RESPONSE is not None:
+                self._unhandled_serverbound_packets.put_nowait(packet)
 
     class MasterClientConnection(CommonConnection):
         IS_MASTER = True
 
         _listen_sequentially = True
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+            self._wrote_initial_clientbound = False
+            self._unhandled_serverbound_packets = asyncio.Queue()
 
         async def _read_next_packet(self):
             try:
@@ -138,10 +131,51 @@ class Proxy(pak.AsyncPacketHandler):
             if packet_cls is None:
                 raise ValueError(f"Attempted to read serverbound master packet with unknown ID: 0x{header.id:02X}")
 
+            if packet_cls.RESPONSE is ServerboundMasterPacket.UNKNOWN_RESPONSE:
+                raise ValueError(
+                    "Attempted to read serverbound master packet "
+                    f"'{packet_cls.__qualname__}' with unknown response"
+                )
+
             try:
-                return await packet_cls.unpack_async(self.reader, ctx=self.ctx)
+                packet = await packet_cls.unpack_async(self.reader, ctx=self.ctx)
             except asyncio.IncompleteReadError:
                 return None
+
+            if packet.RESPONSE is not None:
+                self._unhandled_serverbound_packets.put_nowait(packet)
+
+            return packet
+
+        async def write_packet_instance(self, packet):
+            if not self._wrote_initial_clientbound and isinstance(packet, master.clientbound.ServerInfoPacket):
+                await self.write_data(packet.pack(ctx=self.ctx))
+
+                self._wrote_initial_clientbound = True
+
+                return
+
+            next_serverbound_packet = await self._unhandled_serverbound_packets.get()
+
+            if next_serverbound_packet.RESPONSE is None:
+                raise ValueError(
+                    f"Attempted to write {packet} but "
+                    f"{next_serverbound_packet} should have no response"
+                )
+
+            if next_serverbound_packet.RESPONSE is ServerboundMasterPacket.UNKNOWN_RESPONSE:
+                raise ValueError(
+                    f"Attempted to write {packet} but "
+                    f"{next_serverbound_packet} has an unknown response"
+                )
+
+            if not isinstance(packet, next_serverbound_packet.RESPONSE):
+                raise TypeError(
+                    f"Attempted to write {packet} but {next_serverbound_packet} expects "
+                    f"'{next_serverbound_packet.RESPONSE.__qualname__}' instead"
+                )
+
+            await self.write_data(packet.pack(ctx=self.ctx))
 
     class GameServerConnection(CommonConnection):
         async def continuously_read_packets(self):
