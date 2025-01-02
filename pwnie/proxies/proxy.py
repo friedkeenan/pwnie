@@ -20,8 +20,6 @@ from ..packets import (
 @public
 class Proxy(pak.AsyncPacketHandler):
     class CommonConnection(pak.io.Connection):
-        MAX_PACKET_LENGTH = 0x4000
-
         IS_MASTER = False
 
         _listen_sequentially = False
@@ -60,60 +58,66 @@ class Proxy(pak.AsyncPacketHandler):
 
         _listen_sequentially = True
 
-        _UNSET_SERVERBOUND_PACKET = pak.util.UniqueSentinel()
-
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
-            self._last_serverbound_packet = self._UNSET_SERVERBOUND_PACKET
+            self._last_serverbound_packet = None
 
         async def continuously_read_packets(self):
-            data = await self.reader.read(self.MAX_PACKET_LENGTH)
-            if len(data) <= 0:
+            try:
+                initial_header = await master.clientbound.ServerInfoPacket.Header.unpack_async(self.reader, ctx=self.ctx)
+            except asyncio.IncompleteReadError:
                 self.close()
                 await self.wait_closed()
 
                 return
 
-            data = io.BytesIO(data)
-
-            initial_header = master.clientbound.ServerInfoPacket.Header.unpack(data, ctx=self.ctx)
             if initial_header.magic != master.clientbound.ServerInfoPacket.magic:
+                self.close()
+                await self.wait_closed()
+
                 return
 
-            yield master.clientbound.ServerInfoPacket.unpack(data, ctx=self.ctx)
+            try:
+                yield await master.clientbound.ServerInfoPacket.unpack_async(self.reader, ctx=self.ctx)
+            except asyncio.IncompleteReadError:
+                self.close()
+                await self.wait_closed()
+
+                return
 
             async for packet in super().continuously_read_packets():
                 yield packet
 
         async def _read_next_packet(self):
-            packet_data = await self.reader.read(self.MAX_PACKET_LENGTH)
-            if len(packet_data) <= 0:
-                return None
-
-            if self._last_serverbound_packet.RESPONSE is None:
-                raise ValueError(f"Unexpected response from '{self._last_serverbound_packet.__qualname__}")
+            # TODO: Might be better to use a value holder or whatever.
+            while self._last_serverbound_packet is None or self._last_serverbound_packet.RESPONSE is None:
+                await pak.util.yield_exec()
 
             packet_cls = self._last_serverbound_packet.RESPONSE
             if packet_cls is ServerboundMasterPacket.UNKNOWN_RESPONSE:
-                packet_cls = ClientboundMasterPacket.Generic
+                raise ValueError(f"Attempted to read unknown response for {self._last_serverbound_packet}")
 
-            self._last_serverbound_packet = self._UNSET_SERVERBOUND_PACKET
+            self._last_serverbound_packet = None
 
-            return packet_cls.unpack(packet_data, ctx=self.ctx)
+            try:
+                return await packet_cls.unpack_async(self.reader, ctx=self.ctx)
+            except asyncio.IncompleteReadError:
+                return None
 
         async def write_packet_instance(self, packet):
             if (
-                self._last_serverbound_packet is not self._UNSET_SERVERBOUND_PACKET and
+                self._last_serverbound_packet is not None and
 
-                self._last_serverbound_packet.RESPONSE is not None and
-
-                self._last_serverbound_packet.RESPONSE is not ServerboundMasterPacket.UNKNOWN_RESPONSE
+                self._last_serverbound_packet.RESPONSE is not None
             ):
                 raise ValueError(
-                    f"Attempted to write '{type(packet).__qualname__}' before reading "
-                    f"response to '{type(self._last_serverbound_packet).__qualname__}'"
+                    f"Attempted to write '{packet}' before reading "
+                    f"response to '{self._last_serverbound_packet}'"
                 )
+
+            if packet.RESPONSE is ServerboundMasterPacket.UNKNOWN_RESPONSE:
+                raise ValueError(f"Attempted to write {packet} with unknown response")
 
             await self.write_data(packet.pack(ctx=self.ctx))
 
@@ -125,77 +129,75 @@ class Proxy(pak.AsyncPacketHandler):
         _listen_sequentially = True
 
         async def _read_next_packet(self):
-            data = await self.reader.read(self.MAX_PACKET_LENGTH)
-            if len(data) <= 0:
+            try:
+                header = await ServerboundMasterPacket.Header.unpack_async(self.reader, ctx=self.ctx)
+            except asyncio.IncompleteReadError:
                 return None
-
-            data = io.BytesIO(data)
-
-            header = ServerboundMasterPacket.Header.unpack(data, ctx=self.ctx)
 
             packet_cls = ServerboundMasterPacket.subclass_with_id(header.id, ctx=self.ctx)
             if packet_cls is None:
-                packet_cls = ServerboundMasterPacket.GenericWithID(header.id)
+                raise ValueError(f"Attempted to read serverbound master packet with unknown ID: 0x{header.id:02X}")
 
-            return packet_cls.unpack(data, ctx=self.ctx)
+            try:
+                return await packet_cls.unpack_async(self.reader, ctx=self.ctx)
+            except asyncio.IncompleteReadError:
+                return None
 
     class GameServerConnection(CommonConnection):
         async def continuously_read_packets(self):
-            data = await self.reader.read(self.MAX_PACKET_LENGTH)
-            if len(data) <= 0:
+            try:
+                yield await game.clientbound.InitialPlayerInfoPacket.unpack_async(self.reader, ctx=self.ctx)
+            except asyncio.IncompleteReadError:
                 self.close()
                 await self.wait_closed()
 
                 return
 
-            yield game.clientbound.InitialPlayerInfoPacket.unpack(data, ctx=self.ctx)
-
             async for packet in super().continuously_read_packets():
                 yield packet
 
         async def _read_next_packet(self):
-            data = await self.reader.read(self.MAX_PACKET_LENGTH)
-            if len(data) <= 0:
+            try:
+                header = await ClientboundGamePacket.Header.unpack_async(self.reader, ctx=self.ctx)
+            except asyncio.IncompleteReadError:
                 return None
-
-            data = io.BytesIO(data)
-
-            header = ClientboundGamePacket.Header.unpack(data, ctx=self.ctx)
 
             packet_cls = ClientboundGamePacket.subclass_with_id(header.id, ctx=self.ctx)
             if packet_cls is None:
-                packet_cls = ClientboundGamePacket.GenericWithID(header.id)
+                raise ValueError(f"Attempted to read clientbound game packet with unknown ID: 0x{header.id:04X}")
 
-            return packet_cls.unpack(data, ctx=self.ctx)
+            try:
+                return await packet_cls.unpack_async(self.reader, ctx=self.ctx)
+            except asyncio.IncompleteReadError:
+                return None
 
     class GameClientConnection(CommonConnection):
         async def continuously_read_packets(self):
-            data = await self.reader.read(self.MAX_PACKET_LENGTH)
-            if len(data) <= 0:
+            try:
+                yield await game.serverbound.JoinGameServerPacket.unpack_async(self.reader, ctx=self.ctx)
+            except asyncio.IncompleteReadError:
                 self.close()
                 await self.wait_closed()
 
                 return
 
-            yield game.serverbound.JoinGameServerPacket.unpack(data, ctx=self.ctx)
-
             async for packet in super().continuously_read_packets():
                 yield packet
 
         async def _read_next_packet(self):
-            data = await self.reader.read(self.MAX_PACKET_LENGTH)
-            if len(data) <= 0:
+            try:
+                header = await ServerboundGamePacket.Header.unpack_async(self.reader, ctx=self.ctx)
+            except asyncio.IncompleteReadError:
                 return None
-
-            data = io.BytesIO(data)
-
-            header = ServerboundGamePacket.Header.unpack(data, ctx=self.ctx)
 
             packet_cls = ServerboundGamePacket.subclass_with_id(header.id, ctx=self.ctx)
             if packet_cls is None:
-                packet_cls = ServerboundGamePacket.GenericWithID(header.id)
+                raise ValueError(f"Attempted to read serverbound game packet with unknown ID: 0x{header.id:04X}")
 
-            return packet_cls.unpack(data, ctx=self.ctx)
+            try:
+                return await packet_cls.unpack_async(self.reader, ctx=self.ctx)
+            except asyncio.IncompleteReadError:
+                return None
 
     class ConnectionGroup:
         class ServerAndClient:
@@ -273,9 +275,10 @@ class Proxy(pak.AsyncPacketHandler):
 
         self._server_ssl.load_cert_chain(certificate, keyfile)
 
+        # TODO: Figure out if SECLEVEL=0 is really needed.
         self._client_ssl = ssl.create_default_context()
         self._client_ssl.minimum_version = ssl.TLSVersion.TLSv1
-        self._client_ssl.set_ciphers("DEFAULT@SECLEVEL=1")
+        self._client_ssl.set_ciphers("DEFAULT@SECLEVEL=0")
 
         # We don't bother verifying the server's certificate.
         self._client_ssl.check_hostname = False

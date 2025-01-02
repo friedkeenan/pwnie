@@ -18,6 +18,10 @@ class Vector(pak.Type):
         return np.array([pak.Float32.unpack(buf, ctx=ctx) for _ in range(cls._num_floats)])
 
     @classmethod
+    async def _unpack_async(cls, reader, *, ctx):
+        return np.array([await pak.Float32.unpack_async(reader, ctx=ctx) for _ in range(cls._num_floats)])
+
+    @classmethod
     def _pack(cls, value, *, ctx):
         return b"".join(pak.Float32.pack(coord, ctx=ctx) for coord in value[:cls._num_floats])
 
@@ -33,6 +37,10 @@ class Rotation(pak.SubPacket):
         @classmethod
         def _unpack(cls, buf, *, ctx):
             return 360 * (pak.UInt16.unpack(buf, ctx=ctx) / 0xFFFF)
+
+        @classmethod
+        async def _unpack_async(cls, reader, *, ctx):
+            return 360 * (await pak.UInt16.unpack_async(reader, ctx=ctx) / 0xFFFF)
 
         @classmethod
         def _pack(cls, value, *, ctx):

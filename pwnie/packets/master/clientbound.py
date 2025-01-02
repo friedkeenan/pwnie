@@ -6,6 +6,8 @@ from ... import types
 
 from ..packet import ClientboundMasterPacket
 
+from .common import AccountInfo
+
 @public
 class ServerInfoPacket(ClientboundMasterPacket):
     class Header(ClientboundMasterPacket.Header):
@@ -19,15 +21,17 @@ class ServerInfoPacket(ClientboundMasterPacket):
 
 @public
 class LoginResultPacket(ClientboundMasterPacket):
-    class AccountInfo(pak.SubPacket):
-        user_id: pak.UInt32
-
-        team_hash: types.String
-        team_name: types.String
-
-        admin: pak.Bool
-
     account_info: pak.Optional(AccountInfo, pak.Bool)
+
+@public
+class RegisterResultPacket(ClientboundMasterPacket):
+    account_info: pak.Optional(AccountInfo, pak.Bool)
+
+    error_message: pak.Optional(types.String, lambda packet: not packet.succeeded)
+
+    @property
+    def succeeded(self):
+        return self.account_info is not None
 
 @public
 class PlayerCountsPacket(ClientboundMasterPacket):
@@ -44,11 +48,26 @@ class CharacterListPacket(ClientboundMasterPacket):
         avatar: pak.UInt8
         colors: pak.UInt32[4]
 
-        unk_uint32_6: pak.UInt32 # Number of flags?
+        # Number of flags?
+        unk_uint32_6: pak.UInt32
 
         transitioning: pak.Bool
 
     characters: CharacterInfo[pak.UInt16]
+
+@public
+class CreateCharacterResultPacket(ClientboundMasterPacket):
+    character_id: pak.Optional(pak.UInt32, pak.Bool)
+
+    error_message: pak.Optional(types.String, lambda packet: not packet.succeeded)
+
+    @property
+    def succeeded(self):
+        return self.character_id is not None
+
+@public
+class DeleteCharacterResultPacket(ClientboundMasterPacket):
+    succeeded: pak.Bool
 
 @public
 class JoinGamePacket(ClientboundMasterPacket):

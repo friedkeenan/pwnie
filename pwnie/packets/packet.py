@@ -16,29 +16,11 @@ class ServerboundPacket(Packet):
 
 @public
 class MasterPacket(Packet):
-    @classmethod
-    @pak.util.cache
-    def GenericWithID(cls, id):
-        return type(f"{cls.__qualname__}.GenericWithID(0x{id:02X})", (pak.GenericPacket, cls), dict(
-            id = id,
-
-            __module__ = cls.__module__,
-        ))
+    pass
 
 @public
 class ClientboundMasterPacket(MasterPacket, ClientboundPacket):
-    # To later be replaced with a class which inherits from 'ClientboundMasterPacket'.
-    class Generic:
-        pass
-
-class _GenericClientboundMasterPacket(ClientboundMasterPacket):
-    data: pak.RawByte[None]
-
-_GenericClientboundMasterPacket.__name__     = "Generic"
-_GenericClientboundMasterPacket.__qualname__ = "ClientboundMasterPacket.Generic"
-ClientboundMasterPacket.Generic              = _GenericClientboundMasterPacket
-
-del _GenericClientboundMasterPacket
+    pass
 
 @public
 class ServerboundMasterPacket(MasterPacket, ServerboundPacket):
@@ -54,15 +36,6 @@ class ServerboundMasterPacket(MasterPacket, ServerboundPacket):
 class GamePacket(Packet):
     class Header(Packet.Header):
         id: pak.UInt16
-
-    @classmethod
-    @pak.util.cache
-    def GenericWithID(cls, id):
-        return type(f"{cls.__qualname__}.GenericWithID(0x{id:04X})", (pak.GenericPacket, cls), dict(
-            id = id,
-
-            __module__ = cls.__module__,
-        ))
 
 @public
 class ClientboundGamePacket(GamePacket, ClientboundPacket):
