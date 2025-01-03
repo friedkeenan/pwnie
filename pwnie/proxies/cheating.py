@@ -12,11 +12,11 @@ class FlyProxy(TrackMovementProxy):
 
     @pak.packet_listener(game.clientbound.InitialPlayerInfoPacket)
     async def _init_flying(self, source, packet):
-        source.meta.flying = False
+        source.data.flying = False
 
     @pak.packet_listener(game.serverbound.SetSprintingPacket)
     async def _set_flying(self, source, packet):
-        if source.meta.flying and packet.is_sprinting:
+        if source.data.flying and packet.is_sprinting:
             # Reset the player's velocity when they stop flying.
 
             await source.write_packet(
@@ -24,20 +24,20 @@ class FlyProxy(TrackMovementProxy):
 
                 actor_id = source.actor_id,
 
-                position      = source.meta.position,
-                look_rotation = source.meta.look_rotation,
+                position      = source.data.position,
+                look_rotation = source.data.look_rotation,
 
                 velocity = [0, 0, 0],
 
-                forward = source.meta.forward,
-                strafe  = source.meta.strafe,
+                forward = source.data.forward,
+                strafe  = source.data.strafe,
             )
 
-        source.meta.flying = not packet.is_sprinting
+        source.data.flying = not packet.is_sprinting
 
     @pak.packet_listener(game.serverbound.MovePacket)
     async def _fly(self, source, packet):
-        if not source.meta.flying:
+        if not source.data.flying:
             return
 
         # It would be kinda nice to use the

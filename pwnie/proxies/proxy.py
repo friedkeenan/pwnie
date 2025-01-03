@@ -62,16 +62,16 @@ class Proxy(pak.AsyncPacketHandler):
             return self.group.game
 
         @property
-        def meta(self):
-            return self.group.meta
+        def data(self):
+            return self.group.data
 
         @property
         def actor_id(self):
-            return self.meta.actor_id
+            return self.data.actor_id
 
         @actor_id.setter
         def actor_id(self, value):
-            self.meta.actor_id = value
+            self.data.actor_id = value
 
     class MasterServerConnection(CommonConnection):
         IS_MASTER = True
@@ -255,7 +255,7 @@ class Proxy(pak.AsyncPacketHandler):
                 self.server = None
                 self.client = None
 
-        class Metadata:
+        class Data:
             # Just a dummy object to store arbitrary data.
 
             pass
@@ -266,7 +266,7 @@ class Proxy(pak.AsyncPacketHandler):
             self.master = self.ServerAndClient()
             self.game   = self.ServerAndClient()
 
-            self.meta = self.Metadata()
+            self.data = self.Data()
 
         def _remove_from_proxy(self):
             try:
