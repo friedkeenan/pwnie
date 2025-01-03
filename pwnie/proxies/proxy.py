@@ -53,6 +53,18 @@ class Proxy(pak.AsyncPacketHandler):
         async def write_packet_instance(self, packet):
             await self.write_data(packet.pack(ctx=self.ctx))
 
+        @property
+        def master(self):
+            return self.group.master
+
+        @property
+        def game(self):
+            return self.group.game
+
+        @property
+        def meta(self):
+            return self.group.meta
+
     class MasterServerConnection(CommonConnection):
         IS_MASTER = True
 
@@ -239,11 +251,18 @@ class Proxy(pak.AsyncPacketHandler):
                 self.server = None
                 self.client = None
 
+        class Metadata:
+            # Just a dummy object to store arbitrary data.
+
+            pass
+
         def __init__(self, proxy):
             self.proxy = proxy
 
             self.master = self.ServerAndClient()
             self.game   = self.ServerAndClient()
+
+            self.meta = self.Metadata()
 
         def _remove_from_proxy(self):
             try:
