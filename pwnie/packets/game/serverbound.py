@@ -29,12 +29,10 @@ class ChatPacket(ServerboundGamePacket):
 class SetCircuitInputsPacket(ServerboundGamePacket):
     id = 0x3130
 
-    # TODO: Better names for fields.
-
     name: types.String
 
-    # Probably a bit field.
-    state: pak.UInt32
+    # TODO: Probably a bit field.
+    inputs: pak.UInt32
 
 @public
 class EquipItemPacket(ServerboundGamePacket):
