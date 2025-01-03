@@ -22,7 +22,7 @@ class Proxy(pak.AsyncPacketHandler):
     class CommonConnection(pak.io.Connection):
         IS_MASTER = False
 
-        _listen_sequentially = False
+        _listen_sequentially = True
 
         def __init__(self, group, *, destination=None, ctx=None, **kwargs):
             self.group       = group
@@ -65,10 +65,16 @@ class Proxy(pak.AsyncPacketHandler):
         def meta(self):
             return self.group.meta
 
+        @property
+        def actor_id(self):
+            return self.meta.actor_id
+
+        @actor_id.setter
+        def actor_id(self, value):
+            self.meta.actor_id = value
+
     class MasterServerConnection(CommonConnection):
         IS_MASTER = True
-
-        _listen_sequentially = True
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -124,8 +130,6 @@ class Proxy(pak.AsyncPacketHandler):
 
     class MasterClientConnection(CommonConnection):
         IS_MASTER = True
-
-        _listen_sequentially = True
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -500,3 +504,14 @@ class Proxy(pak.AsyncPacketHandler):
         group.game.server = self.GameServerConnection(group, destination=source, reader=server_reader, writer=server_writer)
 
         source.destination = group.game.server
+
+        source.group = group
+        source.destination.group = group
+
+        source._listen_sequentially = False
+        source.destination._listen_sequentially = False
+
+    @pak.packet_listener(game.clientbound.InitialPlayerInfoPacket)
+    async def _on_initial_player_info(self, source, packet):
+        # Track the player's actor ID for convenience.
+        source.actor_id = packet.actor_id

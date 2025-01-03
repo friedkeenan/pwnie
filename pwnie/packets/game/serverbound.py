@@ -38,11 +38,17 @@ class SetJumpingPacket(ServerboundGamePacket):
     is_jumping: pak.Bool
 
 @public
+class TeleportPacket(ServerboundGamePacket):
+    id = 0x7074
+
+    name: types.String
+
+@public
 class MovePacket(ServerboundGamePacket):
     id = 0x766D
 
     position:      types.Vector
     look_rotation: types.Rotation
 
-    forward_velocity: types.SignedFraction
-    strafe_velocity:  types.SignedFraction
+    forward: types.SignedFraction
+    strafe:  types.SignedFraction
