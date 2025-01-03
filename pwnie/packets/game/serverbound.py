@@ -26,6 +26,71 @@ class ChatPacket(ServerboundGamePacket):
     message: types.String
 
 @public
+class SetCircuitInputsPacket(ServerboundGamePacket):
+    id = 0x3130
+
+    # TODO: Better names for fields.
+
+    name: types.String
+
+    # Probably a bit field.
+    state: pak.UInt32
+
+@public
+class EquipItemPacket(ServerboundGamePacket):
+    id = 0x3D69
+
+    slot: pak.UInt8
+    name: types.String
+
+@public
+class SetCurrentQuestPacket(ServerboundGamePacket):
+    id = 0x3D71
+
+    name: types.String
+
+@public
+class SetCurrentSlotPacket(ServerboundGamePacket):
+    id = 0x3D73
+
+    slot: pak.UInt8
+
+@public
+class TransitionToNPCStatePacket(ServerboundGamePacket):
+    id = 0x3E23
+
+    state: types.String
+
+@public
+class BuyItemPacket(ServerboundGamePacket):
+    id = 0x6224
+
+    npc_actor_id: pak.UInt32
+    name:         types.String
+    count:        pak.UInt32
+
+@public
+class UsePacket(ServerboundGamePacket):
+    # TODO: Better name?
+
+    id = 0x6565
+
+    actor_id: pak.UInt32
+
+@public
+class ActivatePacket(ServerboundGamePacket):
+    # TODO: Better name?
+
+    id = 0x692A
+
+    name:          types.String
+    look_rotation: types.PrecisionRotation
+
+@public
+class ReloadPacket(ServerboundGamePacket):
+    id = 0x6C72
+
+@public
 class SetSprintingPacket(ServerboundGamePacket):
     id = 0x6E72
 
@@ -44,6 +109,33 @@ class TeleportPacket(ServerboundGamePacket):
     name: types.String
 
 @public
+class FireRequestPacket(ServerboundGamePacket):
+    # TODO: Better names.
+
+    id = 0x7266
+
+    state: pak.Bool
+
+@public
+class SellItem(ServerboundGamePacket):
+    id = 0x7324
+
+    npc_actor_id: pak.UInt32
+    name:         types.String
+    count:        pak.UInt32
+
+@public
+class RespawnPacket(ServerboundGamePacket):
+    id = 0x7372
+
+@public
+class FastTravelPacket(ServerboundGamePacket):
+    id = 0x7466
+
+    origin:      types.String
+    destination: types.String
+
+@public
 class MovePacket(ServerboundGamePacket):
     id = 0x766D
 
@@ -52,3 +144,15 @@ class MovePacket(ServerboundGamePacket):
 
     forward: types.SignedFraction
     strafe:  types.SignedFraction
+
+@public
+class SetPVPDesiredPacket(ServerboundGamePacket):
+    id = 0x7670
+
+    desired: pak.Bool
+
+@public
+class SubmitDLCKeyPacket(ServerboundGamePacket):
+    id = 0x796B
+
+    key: types.String

@@ -35,8 +35,21 @@ class Vector(pak.Type):
 class Vector16(Vector):
     underlying = Saturated16
 
+class _Rotation:
+    def direction(self):
+        pitch = np.deg2rad(self.pitch)
+        yaw   = np.deg2rad(self.yaw)
+
+        return np.array([
+            np.cos(yaw),
+
+            np.sin(yaw),
+
+            np.sin(pitch),
+        ])
+
 @public
-class Rotation(pak.SubPacket):
+class Rotation(pak.SubPacket, _Rotation):
     class _Angle(pak.Type):
         _default = 0.0
 
@@ -60,14 +73,8 @@ class Rotation(pak.SubPacket):
     yaw:   _Angle
     roll:  _Angle
 
-    def direction(self):
-        pitch = np.deg2rad(self.pitch)
-        yaw   = np.deg2rad(self.yaw)
-
-        return np.array([
-            np.cos(yaw),
-
-            np.sin(yaw),
-
-            np.sin(pitch),
-        ])
+@public
+class PrecisionRotation(pak.SubPacket, _Rotation):
+    pitch: pak.Float32
+    yaw:   pak.Float32
+    roll:  pak.Float32
