@@ -1,3 +1,4 @@
+import dataclasses
 import pak
 
 from public import public
@@ -60,12 +61,56 @@ class UpdateHealthPacket(ClientboundGamePacket):
     health: pak.Int32
 
 @public
-class CircuitOutputPacket(ClientboundGamePacket):
+class CircuitOutputsPacket(ClientboundGamePacket):
     id = 0x3130
+
+    @dataclasses.dataclass
+    class CircuitOutputs:
+        # TODO: Bitfield.
+
+        num_outputs: int
+        bitfield:    int
+
+    class _CircuitOutputs(pak.Type):
+        @classmethod
+        def _default(cls, *, ctx):
+            return CircuitOutputsPacket.CircuitOutputs(
+                num_outputs = 0,
+                bitfield    = 0,
+            )
+
+        @classmethod
+        async def _unpack_async(cls, reader, *, ctx):
+            num_bits  = await pak.UInt16.unpack_async(reader, ctx=ctx)
+            num_bytes = (num_bits + 7) // 8
+
+            bitfield = int.from_bytes(
+                await reader.readexactly(num_bytes),
+
+                byteorder = "little",
+            )
+
+            return CircuitOutputsPacket.CircuitOutputs(
+                num_outputs = num_bits,
+                bitfield    = bitfield,
+            )
+
+        @classmethod
+        def _pack(cls, value, *, ctx):
+            num_bytes = (value.num_outputs + 7) // 8
+
+            return (
+                pak.Int16.pack(value.num_outputs, ctx=ctx) +
+
+                value.bitfield.to_bytes(
+                    length    = num_bytes,
+                    byteorder = "little",
+                )
+            )
 
     name:    types.String
     inputs:  pak.UInt32 # TODO: Probably bit field.
-    outputs: pak.Bool[pak.UInt16]
+    outputs: _CircuitOutputs
 
 @public
 class KillPacket(ClientboundGamePacket):
