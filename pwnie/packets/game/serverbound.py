@@ -85,7 +85,7 @@ class ActivatePacket(ServerboundGamePacket):
     look_rotation: types.PrecisionRotation
 
 @public
-class ReloadPacket(ServerboundGamePacket):
+class ReloadWeaponPacket(ServerboundGamePacket):
     id = 0x6C72
 
 @public

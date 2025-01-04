@@ -21,7 +21,7 @@ class TickCompletedPacket(ClientboundGamePacket):
     id = 0x0000
 
 @public
-class PVPCountdownUpdatePacket(ClientboundGamePacket):
+class UpdatePVPCountdownPacket(ClientboundGamePacket):
     id = 0x18E2
 
     enabled:   pak.Bool
@@ -125,8 +125,8 @@ class PlayerJoinedPacket(ClientboundGamePacket):
     id = 0x636E
 
     class State(pak.SubPacket):
-        name:    types.String
-        enabled: pak.Bool
+        name:  types.String
+        value: pak.Bool
 
     actor_id: pak.UInt32
 
@@ -146,6 +146,42 @@ class PlayerJoinedPacket(ClientboundGamePacket):
     states: State[pak.Int16]
 
 @public
+class CompleteQuestPacket(ClientboundGamePacket):
+    id = 0x645E
+
+    name: types.String
+
+@public
+class UpdateCountdownPacket(ClientboundGamePacket):
+    id = 0x6463
+
+    countdown: pak.UInt32
+
+@public
+class EndNPCConversationPacket(ClientboundGamePacket):
+    id = 0x6623
+
+@public
+class ChangeRegionPacket(ClientboundGamePacket):
+    id = 0x6863
+
+    name: types.String
+
+@public
+class SetLastHitByItemPacket(ClientboundGamePacket):
+    id = 0x686c
+
+    name: types.String
+
+@public
+class SetPlayerItemPacket(ClientboundGamePacket):
+    id = 0x6970
+
+    actor_id: pak.UInt32
+
+    item_name: types.String
+
+@public
 class SpawnActorPacket(ClientboundGamePacket):
     id = 0x6B6D
 
@@ -163,6 +199,38 @@ class SpawnActorPacket(ClientboundGamePacket):
     health: pak.Int32
 
 @public
+class ReloadWeaponPacket(ClientboundGamePacket):
+    id = 0x6C72
+
+    weapon_name: types.String
+    ammo_name:   types.String
+
+    ammo: pak.UInt32
+
+@public
+class RemoveItemPacket(ClientboundGamePacket):
+    id = 0x6D72
+
+    name:  types.String
+    count: pak.UInt32
+
+@public
+class RespawnOtherPlayerPacket(ClientboundGamePacket):
+    id = 0x6F72
+
+    actor_id: pak.UInt32
+
+    position: types.Vector
+    rotation: types.Rotation
+
+@public
+class AddItemPacket(ClientboundGamePacket):
+    id = 0x7063
+
+    name:  types.String
+    count: pak.UInt32
+
+@public
 class PlayerPositionPacket(ClientboundGamePacket):
     id = 0x7070
 
@@ -176,6 +244,45 @@ class PlayerPositionPacket(ClientboundGamePacket):
     strafe:  types.SignedFraction
 
 @public
+class TeleportPacket(ClientboundGamePacket):
+    id = 0x7074
+
+    actor_id: pak.UInt32
+
+    position: types.Vector
+    rotation: types.Rotation
+
+@public
+class StartQuestPacket(ClientboundGamePacket):
+    id = 0x716E
+
+    name: types.String
+
+@public
+class NotifyReloadedWeaponPacket(ClientboundGamePacket):
+    id = 0x7272
+
+    actor_id: pak.UInt32
+
+    ammo: pak.UInt32
+
+@public
+class TriggerEventPacket(ClientboundGamePacket):
+    id = 0x7274
+
+    actor_id: pak.UInt32
+
+    name:      types.String
+    target_id: pak.UInt32
+
+@public
+class UpdateNPCConversationStatePacket(ClientboundGamePacket):
+    id = 0x7323
+
+    npc_actor_id: pak.UInt32
+    state:        types.String
+
+@public
 class ActorPositionAndVelocityPacket(ClientboundGamePacket):
     id = 0x7370
 
@@ -184,6 +291,45 @@ class ActorPositionAndVelocityPacket(ClientboundGamePacket):
     position: types.Vector
     rotation: types.Rotation
     velocity: types.Vector16
+
+@public
+class RespawnThisPlayerPacket(ClientboundGamePacket):
+    id = 0x7372
+
+    position: types.Vector
+    rotation: types.Rotation
+
+@public
+class RelativeTeleportPacket(ClientboundGamePacket):
+    id = 0x7472
+
+    actor_id: pak.UInt32
+
+    offset: types.Vector
+
+@public
+class UpdateStatePacket(ClientboundGamePacket):
+    id = 0x7473
+
+    actor_id: pak.UInt32
+
+    name:  types.String
+    value: pak.Bool
+
+@public
+class PickUpPacket(ClientboundGamePacket):
+    # TODO: Better names?
+
+    id = 0x7570
+
+    name: types.String
+
+@public
+class DisplayTextPacket(ClientboundGamePacket):
+    id = 0x7665
+
+    title:   types.String
+    message: types.String
 
 @public
 class ActorPositionPacket(ClientboundGamePacket):
@@ -195,13 +341,10 @@ class ActorPositionPacket(ClientboundGamePacket):
     rotation: types.Rotation
 
 @public
-class TeleportPacket(ClientboundGamePacket):
-    id = 0x7074
+class SetPVPEnabledPacket(ClientboundGamePacket):
+    id = 0x7670
 
-    actor_id: pak.UInt32
-
-    position: types.Vector
-    rotation: types.Rotation
+    enabled: pak.Bool
 
 @public
 class DestroyActorPacket(ClientboundGamePacket):

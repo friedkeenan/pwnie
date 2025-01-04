@@ -28,6 +28,9 @@ class LoggingProxy(Proxy):
         if isinstance(packet, game.clientbound.TickCompletedPacket):
             return True
 
+        if isinstance(packet, game.clientbound.ActorPositionAndVelocityPacket):
+            return True
+
         return False
 
     async def _log_packet(self, source, packet):
