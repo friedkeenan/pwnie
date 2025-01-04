@@ -317,9 +317,7 @@ class UpdateStatePacket(ClientboundGamePacket):
     value: pak.Bool
 
 @public
-class PickUpPacket(ClientboundGamePacket):
-    # TODO: Better names?
-
+class GetPickupPacket(ClientboundGamePacket):
     id = 0x7570
 
     name: types.String

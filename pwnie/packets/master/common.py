@@ -12,3 +12,15 @@ class AccountInfo(pak.SubPacket):
     team_name: types.String
 
     admin: pak.Bool
+
+@public
+class Item(pak.SubPacket):
+    name:        types.String
+    count:       pak.UInt32
+    loaded_ammo: pak.UInt16
+
+@public
+class Quest(pak.SubPacket):
+    name:  types.String
+    state: types.String
+    count: pak.UInt32

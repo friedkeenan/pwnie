@@ -18,7 +18,7 @@ class FlyProxy(TrackMovementProxy):
     async def _set_flying(self, source, packet):
         source.data.flying = not packet.is_sprinting
 
-        if not source.data.flying::
+        if not source.data.flying:
             # Reset the player's velocity when they stop flying.
 
             await source.write_packet(

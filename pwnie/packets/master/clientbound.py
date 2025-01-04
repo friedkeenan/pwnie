@@ -6,7 +6,7 @@ from ... import types
 
 from ..packet import ClientboundMasterPacket
 
-from .common import AccountInfo
+from .common import AccountInfo, Item, Quest
 
 @public
 class ServerInfoPacket(ClientboundMasterPacket):
@@ -43,25 +43,32 @@ class PlayerCountsPacket(ClientboundMasterPacket):
     num_total_players: pak.UInt32
 
 @public
+class TeammatesPacket(ClientboundMasterPacket):
+    class Teammate(pak.SubPacket):
+        name:     types.String
+        location: types.String
+
+    teammates: Teammate[pak.UInt16]
+
+@public
 class CharacterListPacket(ClientboundMasterPacket):
     class CharacterInfo(pak.SubPacket):
-        character_id: pak.UInt32
+        character_id: pak.Int32
         name:         types.String
         location:     types.String
 
         avatar: pak.UInt8
         colors: pak.UInt32[4]
 
-        # Number of flags?
-        unk_uint32_6: pak.UInt32
+        num_flags: pak.UInt32
 
-        transitioning: pak.Bool
+        admin: pak.Bool
 
     characters: CharacterInfo[pak.UInt16]
 
 @public
 class CreateCharacterResultPacket(ClientboundMasterPacket):
-    character_id: pak.Optional(pak.UInt32, pak.Bool)
+    character_id: pak.Optional(pak.Int32, pak.Bool)
 
     error_message: pak.Optional(types.String, lambda packet: not packet.succeeded)
 
@@ -76,18 +83,6 @@ class DeleteCharacterResultPacket(ClientboundMasterPacket):
 @public
 class JoinGamePacket(ClientboundMasterPacket):
     class GameInfo(pak.SubPacket):
-        class Quest(pak.SubPacket):
-            name:  types.String
-            state: types.String
-
-            # Count?
-            unk_uint32_3: pak.UInt32
-
-        class Item(pak.SubPacket):
-            name:     types.String
-            item_id:  pak.UInt32
-            quantity: pak.UInt16
-
         game_server_address: types.String
         game_server_port:    pak.UInt16
         game_server_token:   types.String
@@ -95,18 +90,75 @@ class JoinGamePacket(ClientboundMasterPacket):
         character_name: types.String
         team_name:      types.String
 
-        transitioning: pak.Bool
+        admin: pak.Bool
 
         quests:            Quest[pak.UInt16]
         active_quest_name: types.String
 
-        items:  Item[pak.UInt16]
-        hotbar: types.String[10]
+        items:       Item[pak.UInt16]
+        equipped:    types.String[10]
+        active_slot: pak.UInt8
 
-        unk_uint8_11: pak.UInt8
-        unk_array_12: types.String[pak.UInt16]
+        pickups: types.String[pak.UInt16]
 
     access_granted: pak.Bool
     servers_free:   pak.Optional(pak.Bool, "access_granted")
 
     game_info: pak.Optional(GameInfo, lambda packet: packet.access_granted and packet.servers_free)
+
+@public
+class ValidateCharacterTokenResultPacket(ClientboundMasterPacket):
+    class CharacterInfo(pak.SubPacket):
+        character_name: types.String
+        team_name:      types.String
+        location:       types.String
+
+        avatar: pak.UInt8
+        colors: pak.UInt32[4]
+
+        transitioning:       pak.Bool
+        transition_position: types.Vector
+        transition_health:   pak.Int32
+        transition_mana:     pak.Int32
+        transition_pvp:      pak.Bool
+
+        admin: pak.Bool
+
+        quests:            Quest[pak.UInt16]
+        active_quest_name: types.String
+
+        items:       Item[pak.UInt16]
+        equipped:    types.String[10]
+        active_slot: pak.UInt8
+
+        pickups: types.String[pak.UInt16]
+
+    character_info: pak.Optional(CharacterInfo, pak.Bool)
+
+    @property
+    def succeeded(self):
+        return self.character_info is not None
+
+@public
+class CharacterRegionChangeResultPacket(ClientboundMasterPacket):
+    succeeded: pak.Bool
+
+@public
+class GetFlagInfoResultPacket(ClientboundMasterPacket):
+    succeeded: pak.Bool
+
+    message: types.String
+
+    submitted: pak.Optional(pak.Bool, "succeeded")
+
+@public
+class SubmitFlagResultPacket(ClientboundMasterPacket):
+    succeeded: pak.Bool
+
+    message: types.String
+
+@public
+class SubmitAnswerResultPacket(ClientboundMasterPacket):
+    succeeded: pak.Bool
+
+    message: types.String

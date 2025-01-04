@@ -12,7 +12,7 @@ class JoinGameServerPacket(ServerboundGamePacket):
 
     id = None
 
-    character_id:      pak.UInt32
+    character_id:      pak.Int32
     game_server_token: types.String
 
 @public

@@ -51,7 +51,11 @@ class Proxy(pak.AsyncPacketHandler):
             await pak.io.Connection.wait_closed(self)
 
         async def write_packet_instance(self, packet):
-            await self.write_data(packet.pack(ctx=self.ctx))
+            try:
+                await self.write_data(packet.pack(ctx=self.ctx))
+
+            except ConnectionResetError:
+                pass
 
         @property
         def master(self):
@@ -123,7 +127,7 @@ class Proxy(pak.AsyncPacketHandler):
             if packet.RESPONSE is ServerboundMasterPacket.UNKNOWN_RESPONSE:
                 raise ValueError(f"Attempted to write {packet} with unknown response")
 
-            await self.write_data(packet.pack(ctx=self.ctx))
+            await super().write_packet_instance(packet)
 
             if packet.RESPONSE is not None:
                 self._unhandled_serverbound_packets.put_nowait(packet)
@@ -191,7 +195,7 @@ class Proxy(pak.AsyncPacketHandler):
                     f"'{next_serverbound_packet.RESPONSE.__qualname__}' instead"
                 )
 
-            await self.write_data(packet.pack(ctx=self.ctx))
+            await super().write_packet_instance(packet)
 
     class GameServerConnection(CommonConnection):
         async def continuously_read_packets(self):
