@@ -76,9 +76,7 @@ class UsePacket(ServerboundGamePacket):
     actor_id: pak.UInt32
 
 @public
-class ActivatePacket(ServerboundGamePacket):
-    # TODO: Better name?
-
+class ActivateItemPacket(ServerboundGamePacket):
     id = 0x692A
 
     name:          types.String
