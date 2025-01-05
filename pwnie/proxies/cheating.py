@@ -29,13 +29,30 @@ class AutoLootProxy(Proxy):
 
 @public
 class QuickReloadProxy(Proxy):
+    @pak.packet_listener(master.clientbound.JoinGamePacket)
+    async def _track_initial_item_ammo(self, source, packet):
+        if packet.game_info is None:
+            return
+
+        source.data.ammo_info = {
+            item.name: item.loaded_ammo
+
+            for item in packet.game_info.items
+        }
+
+    @pak.packet_listener(game.clientbound.SetAmmoPacket)
+    async def _track_item_ammo(self, source, packet):
+        source.data.ammo_info[packet.item_name] = packet.ammo
+
     @pak.packet_listener(game.clientbound.ReloadWeaponPacket)
     async def _perform_quick_reload(self, source, packet):
+        source.data.ammo_info[packet.weapon_name] += packet.ammo
+
         await source.destination.write_packet(
             game.clientbound.SetAmmoPacket,
 
             item_name = packet.weapon_name,
-            ammo      = packet.ammo,
+            ammo      = source.data.ammo_info[packet.weapon_name],
         )
 
         await source.destination.write_packet(
