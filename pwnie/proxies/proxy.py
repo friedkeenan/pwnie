@@ -378,7 +378,13 @@ class Proxy(pak.AsyncPacketHandler):
             listeners = self.listeners_for_packet(packet)
 
             async def proxy_wrapper():
-                results = await asyncio.gather(*[listener(source_conn, packet) for listener in listeners])
+                try:
+                    results = await asyncio.gather(*[listener(source_conn, packet) for listener in listeners])
+                except Exception:
+                    source_conn.close()
+                    await source_conn.wait_closed()
+
+                    raise
 
                 if False in results:
                     return
@@ -421,6 +427,8 @@ class Proxy(pak.AsyncPacketHandler):
         group.master.server = self.MasterServerConnection(group, destination=group.master.client, reader=server_reader, writer=server_writer)
 
         group.master.client.destination = group.master.server
+
+        group.data.actor_id = None
 
         self.connections.append(group)
 
@@ -472,6 +480,8 @@ class Proxy(pak.AsyncPacketHandler):
     async def _redirect_game_server(self, source, packet):
         if packet.game_info is None:
             return True
+
+        source.actor_id = None
 
         self._game_server_info[packet.game_info.game_server_token] = (
             source.group,

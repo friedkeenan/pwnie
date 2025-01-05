@@ -147,7 +147,7 @@ class AdvanceQuestToStatePacket(ClientboundGamePacket):
     state_name: types.String
 
 @public
-class LoadAmmoPacket(ClientboundGamePacket):
+class SetAmmoPacket(ClientboundGamePacket):
     id = 0x616C
 
     item_name: types.String

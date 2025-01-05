@@ -1,5 +1,7 @@
 from .proxies import (
     LoggingProxy,
+    AutoLootProxy,
+    QuickReloadProxy,
     FlyProxy,
 )
 
@@ -32,6 +34,22 @@ proxy_parser.add_argument(
     action = "append_const",
     dest   = "cheats",
     const  = FlyProxy,
+)
+
+proxy_parser.add_argument(
+    "--loot", help="Automatically collects certain loot",
+
+    action = "append_const",
+    dest   = "cheats",
+    const  = AutoLootProxy,
+)
+
+proxy_parser.add_argument(
+    "--reload", help="Quickly reloads weapons",
+
+    action = "append_const",
+    dest   = "cheats",
+    const  = QuickReloadProxy,
 )
 
 main(parser.parse_args())

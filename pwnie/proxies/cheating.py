@@ -8,6 +8,46 @@ from ..packets import master, game
 from .proxy import Proxy
 
 @public
+class AutoLootProxy(Proxy):
+    AUTOLOOT_DROPS = [
+        "WhiteDrop",
+        "GreenDrop",
+        "BlueDrop",
+        "PurpleDrop",
+    ]
+
+    @pak.packet_listener(game.clientbound.SpawnActorPacket)
+    async def _perform_autoloot(self, source, packet):
+        if packet.blueprint_name not in self.AUTOLOOT_DROPS:
+            return
+
+        await source.write_packet(
+            game.serverbound.UsePacket,
+
+            actor_id = packet.actor_id,
+        )
+
+@public
+class QuickReloadProxy(Proxy):
+    @pak.packet_listener(game.clientbound.ReloadWeaponPacket)
+    async def _perform_quick_reload(self, source, packet):
+        await source.destination.write_packet(
+            game.clientbound.SetAmmoPacket,
+
+            item_name = packet.weapon_name,
+            ammo      = packet.ammo,
+        )
+
+        await source.destination.write_packet(
+            game.clientbound.RemoveItemPacket,
+
+            name  = packet.ammo_name,
+            count = packet.ammo,
+        )
+
+        return False
+
+@public
 class FlyProxy(Proxy):
     FLY_SPEED = 5000
 
@@ -16,16 +56,12 @@ class FlyProxy(Proxy):
         Moving   = 1
         Hovering = 2
 
-    @staticmethod
-    async def _set_still_for_flying(client):
+    async def _set_still_for_flying(self, client):
         await client.write_packet(
             game.clientbound.ActorPositionAndVelocityPacket,
 
             actor_id = client.actor_id,
             position = client.data.position,
-
-            # Slight upward velocity to counteract gravity.
-            velocity = [0, 0, 39],
         )
 
     @pak.packet_listener(master.clientbound.ServerInfoPacket)
@@ -36,6 +72,8 @@ class FlyProxy(Proxy):
         # Allow "flying" and then jumping off
         # the ground without activating hovering.
         source.data._previous_jumping_for_flying = False
+
+        source.data._track_position_for_hovering = False
 
     @pak.packet_listener(game.clientbound.InitialPlayerInfoPacket)
     async def _set_initial_position_for_flying(self, source, packet):
@@ -69,6 +107,8 @@ class FlyProxy(Proxy):
         match source.data.fly_mode:
             case self.FlyMode.Moving if not packet.is_jumping and not source.data._previous_jumping_for_flying:
                 source.data.fly_mode = self.FlyMode.Hovering
+
+                source.data._track_position_for_hovering = True
 
                 await self._set_still_for_flying(source)
 
@@ -105,10 +145,22 @@ class FlyProxy(Proxy):
                 return True
 
             case self.FlyMode.Hovering:
+                if source.data._track_position_for_hovering:
+                    source.data.position = packet.position
+
+                    source.data._track_position_for_hovering = False
+
                 await source.destination.write_packet_instance(
-                    packet.copy(position=source.data.position)
+                    packet.copy(position=2*source.data.position - packet.position)
                 )
 
-                await self._set_still_for_flying(source)
+                await source.write_packet(
+                    game.clientbound.ActorPositionAndVelocityPacket,
+
+                    actor_id = source.actor_id,
+
+                    position = source.data.position,
+                    velocity = source.data.position - packet.position,
+                )
 
                 return False
