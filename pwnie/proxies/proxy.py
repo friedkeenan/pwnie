@@ -483,7 +483,7 @@ class Proxy(pak.AsyncPacketHandler):
 
         source.actor_id = None
 
-        self._game_server_info[packet.game_info.game_server_token] = (
+        self._game_server_info[packet.game_info.character_token] = (
             source.group,
 
             packet.game_info.game_server_address,
@@ -504,7 +504,7 @@ class Proxy(pak.AsyncPacketHandler):
     @pak.packet_listener(game.serverbound.JoinGameServerPacket)
     async def _attach_game_connection(self, source, packet):
         try:
-            group, address, port = self._game_server_info.pop(packet.game_server_token)
+            group, address, port = self._game_server_info.pop(packet.character_token)
 
         except KeyError:
             source.close()

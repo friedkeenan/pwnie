@@ -94,7 +94,7 @@ class ValidateCharacterTokenPacket(ServerboundMasterPacket):
     RESPONSE = ValidateCharacterTokenResultPacket
 
     character_id:    pak.Int32
-    character_token: types.String # TODO: Same as 'game_server_token'?
+    character_token: types.String
 
 @public
 class AddServerToPoolPacket(ServerboundMasterPacket):

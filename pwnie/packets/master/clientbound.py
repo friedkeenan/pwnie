@@ -85,10 +85,10 @@ class JoinGamePacket(ClientboundMasterPacket):
     class GameInfo(pak.SubPacket):
         game_server_address: types.String
         game_server_port:    pak.UInt16
-        game_server_token:   types.String
 
-        character_name: types.String
-        team_name:      types.String
+        character_token: types.String
+        character_name:  types.String
+        team_name:       types.String
 
         admin: pak.Bool
 

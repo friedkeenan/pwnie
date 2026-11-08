@@ -12,8 +12,8 @@ class JoinGameServerPacket(ServerboundGamePacket):
 
     id = None
 
-    character_id:      pak.Int32
-    game_server_token: types.String
+    character_id:    pak.Int32
+    character_token: types.String
 
 @public
 class NotifyDisconnectPacket(ServerboundGamePacket):
