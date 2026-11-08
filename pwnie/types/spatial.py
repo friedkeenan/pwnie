@@ -67,6 +67,8 @@ class Rotation(pak.SubPacket, _Rotation):
 
         @classmethod
         def _pack(cls, value, *, ctx):
+            value %= 360
+
             return pak.UInt16.pack(int(0xFFFF * (value / 360)), ctx=ctx)
 
     pitch: _Angle
